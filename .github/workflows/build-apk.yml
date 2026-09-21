@@ -1,0 +1,118 @@
+name: Build QuickBars APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      unlock_plus:
+        description: 'Unlock Plus features locally (no store check)'
+        type: boolean
+        default: false
+      build_type:
+        description: 'Build type'
+        type: choice
+        options: [release, debug]
+        default: release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Patch sources for a self-built (non-Play) APK
+        env:
+          UNLOCK_PLUS: ${{ inputs.unlock_plus }}
+        run: |
+          cat > /tmp/patch.b64 <<'B64'
+          IyEvdXNyL2Jpbi9lbnYgcHl0aG9uMwoiIiJNYWtlIFF1aWNrQmFycyBidWlsZGFibGUgb3V0c2lkZSB0aGUgUGxheSBTdG9yZSBw
+          aXBlbGluZS4KCjEpIFJldmVudWVDYXQgYmlsbGluZyBtdXN0IG5ldmVyIGNyYXNoIGEgc2VsZi1idWlsdCBBUEsgKG5vIHZhbGlk
+          IEFQSSBrZXkpLgoyKSBPcHRpb25hbCAoVU5MT0NLX1BMVVM9dHJ1ZSk6IGVuYWJsZSBQbHVzIGZlYXR1cmVzIGxvY2FsbHkuCiAg
+          IEdQTHYzIGdyYW50cyB0aGUgcmlnaHQgdG8gbW9kaWZ5IHlvdXIgb3duIGNvcHk7IGJ1eWluZyBQbHVzIG9uIEdvb2dsZSBQbGF5
+          CiAgIGlzIHdoYXQgc3VwcG9ydHMgdGhlIGRldmVsb3Blci4KIiIiCmltcG9ydCBvcwppbXBvcnQgcGF0aGxpYgppbXBvcnQgc3lz
+          CgpTUkMgPSBwYXRobGliLlBhdGgoImFwcC9zcmMvbWFpbi9qYXZhL2Rldi90cm9vcGVkL3R2cXVpY2tiYXJzIikKCk9MRF9CSUxM
+          SU5HID0gKAogICAgIiAgICAgICAgUHVyY2hhc2VzLmNvbmZpZ3VyZShcbiIKICAgICIgICAgICAgICAgICBQdXJjaGFzZXNDb25m
+          aWd1cmF0aW9uLkJ1aWxkZXIodGhpcywgQnVpbGRDb25maWcuUkVWRU5VRUNBVF9BUElfS0VZKS5idWlsZCgpXG4iCiAgICAiICAg
+          ICAgICApXG4iCiAgICAiXG4iCiAgICAiICAgICAgICBQdXJjaGFzZXMuc2hhcmVkSW5zdGFuY2UudXBkYXRlZEN1c3RvbWVySW5m
+          b0xpc3RlbmVyID1cbiIKICAgICIgICAgICAgICAgICBVcGRhdGVkQ3VzdG9tZXJJbmZvTGlzdGVuZXIgeyBpbmZvOiBDdXN0b21l
+          ckluZm8gLT5cbiIKICAgICIgICAgICAgICAgICAgICAgUGx1c1N0YXR1c01hbmFnZXIudXBkYXRlKGluZm8pXG4iCiAgICAiICAg
+          ICAgICAgICAgfSIKKQoKTkVXX0JJTExJTkcgPSAoCiAgICAiICAgICAgICB0cnkge1xuIgogICAgIiAgICAgICAgICAgIFB1cmNo
+          YXNlcy5jb25maWd1cmUoXG4iCiAgICAiICAgICAgICAgICAgICAgIFB1cmNoYXNlc0NvbmZpZ3VyYXRpb24uQnVpbGRlcih0aGlz
+          LCBCdWlsZENvbmZpZy5SRVZFTlVFQ0FUX0FQSV9LRVkpLmJ1aWxkKClcbiIKICAgICIgICAgICAgICAgICApXG4iCiAgICAiICAg
+          ICAgICAgICAgUHVyY2hhc2VzLnNoYXJlZEluc3RhbmNlLnVwZGF0ZWRDdXN0b21lckluZm9MaXN0ZW5lciA9XG4iCiAgICAiICAg
+          ICAgICAgICAgICAgIFVwZGF0ZWRDdXN0b21lckluZm9MaXN0ZW5lciB7IGluZm86IEN1c3RvbWVySW5mbyAtPlxuIgogICAgIiAg
+          ICAgICAgICAgICAgICAgICAgUGx1c1N0YXR1c01hbmFnZXIudXBkYXRlKGluZm8pXG4iCiAgICAiICAgICAgICAgICAgICAgIH1c
+          biIKICAgICIgICAgICAgIH0gY2F0Y2ggKHQ6IFRocm93YWJsZSkge1xuIgogICAgJyAgICAgICAgICAgIGFuZHJvaWQudXRpbC5M
+          b2cudygiUXVpY2tCYXJzQXBwIiwgIkJpbGxpbmcgdW5hdmFpbGFibGUgaW4gdGhpcyBidWlsZCIsIHQpXG4nCiAgICAiICAgICAg
+          ICB9IgopCgpPTERfVEVSTUlOQVRFID0gIiAgICAgICAgUHVyY2hhc2VzLnNoYXJlZEluc3RhbmNlLnVwZGF0ZWRDdXN0b21lcklu
+          Zm9MaXN0ZW5lciA9IG51bGwiCk5FV19URVJNSU5BVEUgPSAoCiAgICAiICAgICAgICBpZiAoUHVyY2hhc2VzLmlzQ29uZmlndXJl
+          ZCkgIgogICAgIlB1cmNoYXNlcy5zaGFyZWRJbnN0YW5jZS51cGRhdGVkQ3VzdG9tZXJJbmZvTGlzdGVuZXIgPSBudWxsIgopCgoK
+          ZGVmIGZhaWwobXNnKToKICAgIHByaW50KCJFUlJPUjogIiArIG1zZywgZmlsZT1zeXMuc3RkZXJyKQogICAgc3lzLmV4aXQoMSkK
+          CgpkZWYgbWFpbigpOgogICAgYXBwX2t0ID0gU1JDIC8gIlF1aWNrQmFyc0FwcC5rdCIKICAgIHRleHQgPSBhcHBfa3QucmVhZF90
+          ZXh0KCkKICAgIGlmIE9MRF9CSUxMSU5HIG5vdCBpbiB0ZXh0OgogICAgICAgIGZhaWwoIlF1aWNrQmFyc0FwcC5rdDogYmlsbGlu
+          ZyBibG9jayBub3QgZm91bmQgLSB1cHN0cmVhbSBjb2RlIGNoYW5nZWQuIikKICAgIGlmIE9MRF9URVJNSU5BVEUgbm90IGluIHRl
+          eHQ6CiAgICAgICAgZmFpbCgiUXVpY2tCYXJzQXBwLmt0OiBvblRlcm1pbmF0ZSBsaW5lIG5vdCBmb3VuZCAtIHVwc3RyZWFtIGNv
+          ZGUgY2hhbmdlZC4iKQogICAgdGV4dCA9IHRleHQucmVwbGFjZShPTERfQklMTElORywgTkVXX0JJTExJTkcpLnJlcGxhY2UoT0xE
+          X1RFUk1JTkFURSwgTkVXX1RFUk1JTkFURSkKICAgIGFwcF9rdC53cml0ZV90ZXh0KHRleHQpCiAgICBwcmludCgicGF0Y2hlZCBR
+          dWlja0JhcnNBcHAua3QgKGJpbGxpbmcgaXMgbm93IGZhaWwtc2FmZSkiKQoKICAgIGlmIG9zLmVudmlyb24uZ2V0KCJVTkxPQ0tf
+          UExVUyIsICIiKS5sb3dlcigpID09ICJ0cnVlIjoKICAgICAgICBwbHVzID0gU1JDIC8gInV0aWxzL1BsdXNTdGF0dXNNYW5hZ2Vy
+          Lmt0IgogICAgICAgIHRleHQgPSBwbHVzLnJlYWRfdGV4dCgpCiAgICAgICAgb2xkX2ZsYWcgPSAicHJpdmF0ZSB2YWwgX2lzUGx1
+          cyA9IE11dGFibGVTdGF0ZUZsb3coZmFsc2UpIgogICAgICAgIG9sZF91cGQgPSAnX2lzUGx1cy52YWx1ZSA9IGluZm8uZW50aXRs
+          ZW1lbnRzWyJwbHVzIl0/LmlzQWN0aXZlID09IHRydWUnCiAgICAgICAgaWYgb2xkX2ZsYWcgbm90IGluIHRleHQgb3Igb2xkX3Vw
+          ZCBub3QgaW4gdGV4dDoKICAgICAgICAgICAgZmFpbCgiUGx1c1N0YXR1c01hbmFnZXIua3Q6IGV4cGVjdGVkIGxpbmVzIG5vdCBm
+          b3VuZCAtIHVwc3RyZWFtIGNvZGUgY2hhbmdlZC4iKQogICAgICAgIHRleHQgPSB0ZXh0LnJlcGxhY2Uob2xkX2ZsYWcsICJwcml2
+          YXRlIHZhbCBfaXNQbHVzID0gTXV0YWJsZVN0YXRlRmxvdyh0cnVlKSIpCiAgICAgICAgdGV4dCA9IHRleHQucmVwbGFjZShvbGRf
+          dXBkLCAiX2lzUGx1cy52YWx1ZSA9IHRydWUiKQogICAgICAgIHBsdXMud3JpdGVfdGV4dCh0ZXh0KQogICAgICAgIHByaW50KCJw
+          YXRjaGVkIFBsdXNTdGF0dXNNYW5hZ2VyLmt0IChQbHVzIGVuYWJsZWQgbG9jYWxseSkiKQogICAgZWxzZToKICAgICAgICBwcmlu
+          dCgiUGx1cyBzdGF5cyBsb2NrZWQgKGZyZWUgdGllcjogMSBiYXIsIDEgdHJpZ2dlciBrZXkpIikKCgptYWluKCkK
+          B64
+          base64 -d /tmp/patch.b64 > /tmp/selfbuild_patch.py
+          python3 /tmp/selfbuild_patch.py
+
+      - name: Create a signing key for this build
+        if: inputs.build_type == 'release'
+        run: |
+          keytool -genkeypair -v -keystore "$RUNNER_TEMP/selfbuild.jks" \
+            -alias selfbuild -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass selfbuild -keypass selfbuild \
+            -dname "CN=QuickBars Self Build, OU=Self, O=Self, L=NA, S=NA, C=NA"
+
+      - name: Build APK
+        run: |
+          chmod +x ./gradlew
+          if [ "${{ inputs.build_type }}" = "release" ]; then
+            ./gradlew assembleRelease --no-daemon --stacktrace \
+              -PREVENUECAT_API_KEY='"goog_selfbuild_placeholder"' \
+              -PHA_QUICKBARS_KEYSTORE_FILE="$RUNNER_TEMP/selfbuild.jks" \
+              -PHA_QUICKBARS_KEYSTORE_PASSWORD=selfbuild \
+              -PHA_QUICKBARS_KEY_ALIAS=selfbuild \
+              -PHA_QUICKBARS_KEY_PASSWORD=selfbuild
+          else
+            ./gradlew assembleDebug --no-daemon --stacktrace \
+              -PREVENUECAT_API_KEY='"goog_selfbuild_placeholder"'
+          fi
+
+      - name: Collect APKs
+        run: |
+          mkdir -p artifacts
+          find app/build/outputs/apk -name '*.apk' -exec cp {} artifacts/ \;
+          ls -lh artifacts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quickbars-apk
+          path: artifacts/*.apk
+          if-no-files-found: error
